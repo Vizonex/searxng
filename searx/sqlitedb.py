@@ -12,15 +12,17 @@
 """
 from __future__ import annotations
 
-import sys
+import abc
 import re
 import sqlite3
+import sys
 import threading
-import abc
 
-from searx import logger
+from wsearx import logger
 
 logger = logger.getChild('sqlitedb')
+
+# Helps with typehinting dictionary attributes
 
 
 class SQLiteAppl(abc.ABC):
@@ -85,7 +87,7 @@ class SQLiteAppl(abc.ABC):
       option ``cached_statements`` to ``0`` by default.
     """
 
-    def __init__(self, db_url):
+    def __init__(self, db_url:str):
 
         self.db_url = db_url
         self.properties = SQLiteProperties(db_url)
@@ -128,7 +130,7 @@ class SQLiteAppl(abc.ABC):
         self.register_functions(conn)
         return conn
 
-    def register_functions(self, conn):
+    def register_functions(self, conn:sqlite3.Connection):
         """Create user-defined_ SQL functions.
 
         ``REGEXP(<pattern>, <field>)`` : 0 | 1
@@ -210,7 +212,7 @@ class SQLiteAppl(abc.ABC):
                 raise sqlite3.DatabaseError("Expected DB schema v%s, DB schema is v%s" % (self.DB_SCHEMA, ver))
             logger.debug("DB_SCHEMA = %s", ver)
 
-    def create_schema(self, conn):
+    def create_schema(self, conn:sqlite3.Connection):
 
         logger.debug("create schema ..")
         with conn:
@@ -279,7 +281,7 @@ CREATE TABLE IF NOT EXISTS properties (
             if res.fetchone() is None:  # DB schema needs to be be created
                 self.create_schema(conn)
 
-    def __call__(self, name, default=None):
+    def __call__(self, name:str, default=None):
         """Returns the value of the property ``name`` or ``default`` if property
         not exists in DB."""
 
@@ -288,7 +290,7 @@ CREATE TABLE IF NOT EXISTS properties (
             return default
         return res[0]
 
-    def set(self, name, value):
+    def set(self, name:str, value:str):
         """Set ``value`` of property ``name`` in DB.  If property already
         exists, update the ``m_time`` (and the value)."""
 
@@ -299,7 +301,8 @@ CREATE TABLE IF NOT EXISTS properties (
             # explicitely.
             self.DB.commit()
 
-    def row(self, name, default=None):
+    
+    def row(self, name:str, default=None):
         """Returns the DB row of property ``name`` or ``default`` if property
         not exists in DB."""
 
@@ -311,13 +314,13 @@ CREATE TABLE IF NOT EXISTS properties (
         col_names = [column[0] for column in cur.description]
         return dict(zip(col_names, res))
 
-    def m_time(self, name, default: int = 0) -> int:
+    def m_time(self, name:str, default: int = 0) -> int:
         """Last modification time of this property."""
         res = self.DB.execute(self.SQL_M_TIME, (name,)).fetchone()
         if res is None:
             return default
         return int(res[0])
 
-    def create_schema(self, conn):
+    def create_schema(self, conn:sqlite3.Connection):
         with conn:
             conn.execute(self.DDL_PROPERTIES)
